@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Braai Spot | Premium Street Food</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <header class="glass-header">
+        <nav>
+            <div class="logo">Braai<span class="highlight">Spot</span></div>
+            <ul class="nav-links">
+                <li><a href="#home">Home</a></li>
+                <li><a href="#menu">Menu</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section id="home" class="hero">
+            <div class="hero-content">
+                <h1>Authentic Taste.<br>Unbeatable Prices.</h1>
+                <p>Experience the best local flavors starting from just R1.</p>
+                <a href="#menu" class="cta-button">View Menu</a>
+            </div>
+            <div class="hero-decoration"></div>
+        </section>
+
+        <section id="menu" class="menu-section">
+            <div class="section-header">
+                <h2>Our Menu</h2>
+                <div class="underline"></div>
+            </div>
+
+            <div class="menu-grid">
+                <!-- Pork Braai -->
+                <div class="menu-card fade-in" data-item-id="1">
+                    <div class="card-image">
+                        <img src="images/pork.png" alt="Pork Braai">
+                    </div>
+                    <div class="card-details">
+                        <div class="card-header">
+                            <h3>Pork Braai Piece</h3>
+                            <span class="price">R5</span>
+                        </div>
+                        <p>Succulent, flame-grilled pork seasoned to perfection.</p>
+                        <div class="quantity-controls">
+                            <button class="qty-btn minus">-</button>
+                            <span class="quantity">0</span>
+                            <button class="qty-btn plus">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chicken Feet -->
+                <div class="menu-card fade-in" style="animation-delay: 0.1s;" data-item-id="2">
+                    <div class="card-image">
+                        <img src="images/chicken_feet.png" alt="Chicken Feet">
+                    </div>
+                    <div class="card-details">
+                        <div class="card-header">
+                            <h3>Chicken Feet</h3>
+                            <span class="price">R1</span>
+                        </div>
+                        <p>Traditional "Maotwana" cooked in a savory spicy sauce.</p>
+                        <div class="quantity-controls">
+                            <button class="qty-btn minus">-</button>
+                            <span class="quantity">0</span>
+                            <button class="qty-btn plus">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Short Rib / Liver Stick -->
+                <div class="menu-card fade-in" style="animation-delay: 0.2s;" data-item-id="3">
+                    <div class="card-image placeholder-gradient">
+                        <img src="images/kebkeb.webp" alt="Liver Stick"
+                            onerror="this.style.display='none'; this.parentElement.classList.add('show-placeholder')">
+                        <span class="placeholder-text" style="display: none;">Liver Stick</span>
+                    </div>
+                    <div class="card-details">
+                        <div class="card-header">
+                            <h3>Liver Stick</h3>
+                            <span class="price">R10</span>
+                        </div>
+                        <p>Rich liver mixed with fat, grilled on a stick.</p>
+                        <div class="quantity-controls">
+                            <button class="qty-btn minus">-</button>
+                            <span class="quantity">0</span>
+                            <button class="qty-btn plus">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fat Cakes -->
+                <div class="menu-card fade-in" style="animation-delay: 0.3s;" data-item-id="4">
+                    <div class="card-image placeholder-gradient-2">
+                        <img src="images/fat-cakes.webp" alt="Fat Cakes"
+                            onerror="this.style.display='none'; this.parentElement.classList.add('show-placeholder')">
+                        <span class="placeholder-text" style="display: none;">Fat Cakes</span>
+                    </div>
+                    <div class="card-details">
+                        <div class="card-header">
+                            <h3>Small Fat Cake</h3>
+                            <span class="price">R1</span>
+                        </div>
+                        <p>Freshly fried, golden brown traditional fat cakes.</p>
+                        <div class="quantity-controls">
+                            <button class="qty-btn minus">-</button>
+                            <span class="quantity">0</span>
+                            <button class="qty-btn plus">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chicken Wings -->
+                <div class="menu-card fade-in" style="animation-delay: 0.4s;" data-item-id="5">
+                    <div class="card-image">
+                        <img src="images/wings.webp" alt="Chicken Wings">
+                    </div>
+                    <div class="card-details">
+                        <div class="card-header">
+                            <h3>Chicken Wings</h3>
+                            <span class="price">R8</span>
+                        </div>
+                        <p>Crispy, flavorful chicken wings grilled to perfection.</p>
+                        <div class="quantity-controls">
+                            <button class="qty-btn minus">-</button>
+                            <span class="quantity">0</span>
+                            <button class="qty-btn plus">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sausage -->
+                <div class="menu-card fade-in" style="animation-delay: 0.5s;" data-item-id="6">
+                    <div class="card-image">
+                        <img src="images/sausage-small-pieces.webp" alt="Sausage">
+                    </div>
+                    <div class="card-details">
+                        <div class="card-header">
+                            <h3>Sausage Pieces</h3>
+                            <span class="price">R6</span>
+                        </div>
+                        <p>Juicy sausage pieces seasoned and grilled.</p>
+                        <div class="quantity-controls">
+                            <button class="qty-btn minus">-</button>
+                            <span class="quantity">0</span>
+                            <button class="qty-btn plus">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cart Section -->
+            <div class="cart-section">
+                <h2>Your Order</h2>
+                <div id="cart-items"></div>
+                <div class="cart-total">Total: R<span id="cart-total">0</span></div>
+                <button id="checkout-btn" class="cta-button">Checkout</button>
+            </div>
+        </section>
+    </main>
+
+    <footer id="contact">
+        <div class="footer-content">
+            <div class="footer-brand">Braai<span class="highlight">Spot</span></div>
+            <p>&copy; 2026 Braai Spot. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
