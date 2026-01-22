@@ -1,5 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // -------------------- Fade-in animations --------------------
+  /* ===============================
+     Fade-in animations
+  =============================== */
   const observerOptions = { root: null, rootMargin: "0px", threshold: 0.1 };
 
   const observer = new IntersectionObserver((entries, obs) => {
@@ -13,15 +15,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.querySelectorAll(".fade-in").forEach((el) => observer.observe(el));
 
-  // -------------------- Smooth scroll --------------------
+  /* ===============================
+     Smooth scroll
+  =============================== */
   document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
     anchor.addEventListener("click", function (e) {
       e.preventDefault();
-      document.querySelector(this.getAttribute("href"))?.scrollIntoView({ behavior: "smooth" });
+      const target = document.querySelector(this.getAttribute("href"));
+      if (target) target.scrollIntoView({ behavior: "smooth" });
     });
   });
 
-  // -------------------- Cart rendering + sync quantities --------------------
+  /* ===============================
+     Cart display + sync quantities
+  =============================== */
   async function updateCartDisplay() {
     try {
       const response = await fetch("/api/cart");
@@ -29,6 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const cartItemsDiv = document.getElementById("cart-items");
       const cartTotalSpan = document.getElementById("cart-total");
+      const checkoutBtn = document.getElementById("checkout-btn");
 
       // Render cart items
       cartItemsDiv.innerHTML = "";
@@ -42,21 +50,31 @@ document.addEventListener("DOMContentLoaded", () => {
         cartItemsDiv.appendChild(itemDiv);
       });
 
-      cartTotalSpan.textContent = Number(data.total || 0).toFixed(2);
+      const total = Number(data.total || 0);
+      cartTotalSpan.textContent = total.toFixed(2);
 
-      // Sync the quantities on each menu card (kiosk behaviour)
+      // Sync quantities on cards
       document.querySelectorAll(".menu-card").forEach((card) => {
         const id = String(card.dataset.itemId);
         const qtySpan = card.querySelector(".quantity");
         const match = data.items.find((x) => String(x.id) === id);
         qtySpan.textContent = match ? match.quantity : 0;
       });
+
+      // Disable checkout if cart empty (optional but helpful)
+      if (checkoutBtn) {
+        checkoutBtn.disabled = total <= 0;
+        checkoutBtn.style.opacity = total <= 0 ? "0.6" : "1";
+        checkoutBtn.style.cursor = total <= 0 ? "not-allowed" : "pointer";
+      }
     } catch (error) {
       console.error("Error updating cart:", error);
     }
   }
 
-  // -------------------- Quantity buttons --------------------
+  /* ===============================
+     Quantity buttons (+ / -)
+  =============================== */
   document.querySelectorAll(".qty-btn").forEach((btn) => {
     btn.addEventListener("click", async function () {
       const card = this.closest(".menu-card");
@@ -71,7 +89,6 @@ document.addEventListener("DOMContentLoaded", () => {
             body: JSON.stringify({ itemId, quantity: 1 }),
           });
         } else if (this.classList.contains("minus")) {
-          // remove one
           await fetch("/api/cart/remove", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -86,30 +103,54 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // -------------------- Checkout --------------------
-  document.getElementById("checkout-btn")?.addEventListener("click", async () => {
+  /* ===============================
+     Checkout (NO modal) - PayFast redirect
+  =============================== */
+  const checkoutBtn = document.getElementById("checkout-btn");
+  if (!checkoutBtn) {
+    console.error("Checkout button not found (#checkout-btn).");
+    return;
+  }
+
+  checkoutBtn.addEventListener("click", async () => {
     try {
+      // Get customer details
+      const firstName = document.getElementById("cust-first-name")?.value.trim();
+      const lastName = document.getElementById("cust-last-name")?.value.trim();
+      const email = document.getElementById("cust-email")?.value.trim();
+      const phone = document.getElementById("cust-phone")?.value.trim();
+
+      if (!firstName || !lastName || !email) {
+        alert("Please fill in First Name, Last Name and Email.");
+        return;
+      }
+
+      // Call backend checkout
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer: { firstName, lastName, email, phone },
+        }),
       });
 
       const data = await response.json();
 
-      if (!response.ok) {
-        alert(data?.error || "Checkout failed");
+      if (!response.ok || data.error) {
+        alert(data.error || "Checkout failed");
         return;
       }
 
-      if (data.error) {
-        alert(data.error);
-        return;
-      }
+      // IMPORTANT:
+      // If your server returns "payfastProcessUrl", use it.
+      // Otherwise fallback to sandbox.
+      const payfastUrl =
+        data.payfastProcessUrl || "https://sandbox.payfast.co.za/eng/process";
 
-      // Create PayFast form and submit
+      // Build PayFast form & submit
       const form = document.createElement("form");
       form.method = "POST";
-      form.action = "https://sandbox.payfast.co.za/eng/process";
+      form.action = payfastUrl;
 
       for (const [key, value] of Object.entries(data.payfastData)) {
         const input = document.createElement("input");
@@ -122,10 +163,13 @@ document.addEventListener("DOMContentLoaded", () => {
       document.body.appendChild(form);
       form.submit();
     } catch (error) {
-      console.error("Error during checkout:", error);
+      console.error("Checkout error:", error);
+      alert("Something went wrong during checkout.");
     }
   });
 
-  // Initial load
+  /* ===============================
+     Initial load
+  =============================== */
   updateCartDisplay();
 });
