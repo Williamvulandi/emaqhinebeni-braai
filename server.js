@@ -1,44 +1,35 @@
 const express = require("express");
 const session = require("express-session");
-const crypto = require("crypto");
 const cors = require("cors");
 const helmet = require("helmet");
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-/* =====================================================
-   HELMET + CSP (PayFast allowed)
-   ===================================================== */
+/**
+ * ENV VARS (set these in CMD before npm start)
+ * set PAYSTACK_SECRET_KEY=sk_test_xxxxx
+ */
+const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || "";
+
+// Menu (IDs must match your HTML data-item-id)
+const MENU = {
+  1: { id: 1, name: "Pork Braai Piece", price: 5 },
+  2: { id: 2, name: "Chicken Feet", price: 1 },
+  3: { id: 3, name: "Liver Stick", price: 10 },
+  4: { id: 4, name: "Small Fat Cake", price: 1 },
+  5: { id: 5, name: "Chicken Wings", price: 8 },
+  6: { id: 6, name: "Sausage Pieces", price: 6 }
+};
+
+// -------------------- Middleware --------------------
 app.use(
   helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
-        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-        fontSrc: ["'self'", "https://fonts.gstatic.com"],
-        imgSrc: ["'self'", "data:"],
-        connectSrc: ["'self'"],
-
-        // ✅ Allow form submission to PayFast
-        formAction: [
-          "'self'",
-          "https://sandbox.payfast.co.za",
-          "https://www.payfast.co.za",
-        ],
-
-        objectSrc: ["'none'"],
-        baseUri: ["'self'"],
-        frameAncestors: ["'self'"],
-      },
-    },
+    // Disable CSP while testing so forms/redirects aren't blocked by browser CSP
+    contentSecurityPolicy: false
   })
 );
 
-/* =====================================================
-   MIDDLEWARE
-   ===================================================== */
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -48,195 +39,281 @@ app.use(
     secret: "braai-spot-secret",
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: false },
+    cookie: { secure: false }
   })
 );
 
+// Serve your static files from project root
 app.use(express.static("."));
 
-/* =====================================================
-   MENU (in-memory)
-   ===================================================== */
-const MENU = {
-  "1": { id: 1, name: "Pork Braai Piece", price: 5 },
-  "2": { id: 2, name: "Chicken Feet", price: 1 },
-  "3": { id: 3, name: "Liver Stick", price: 10 },
-  "4": { id: 4, name: "Small Fat Cake", price: 1 },
-  "5": { id: 5, name: "Chicken Wings", price: 8 },
-  "6": { id: 6, name: "Sausage Pieces", price: 6 },
-};
+// -------------------- Helpers --------------------
+function getBaseUrl(req) {
+  // Works on localhost and behind ngrok (x-forwarded-proto becomes https)
+  const proto = req.headers["x-forwarded-proto"] || req.protocol || "http";
+  return `${proto}://${req.get("host")}`;
+}
 
-/* =====================================================
-   HELPERS
-   ===================================================== */
-function buildCart(cart = {}) {
+function buildCart(req) {
+  const cart = req.session.cart || {};
   const items = [];
   let total = 0;
 
-  for (const [itemId, qty] of Object.entries(cart)) {
-    const item = MENU[itemId];
-    if (!item) continue;
+  for (const [idStr, qty] of Object.entries(cart)) {
+    const id = Number(idStr);
+    const menuItem = MENU[id];
+    if (!menuItem) continue;
 
-    items.push({ ...item, quantity: qty });
-    total += item.price * qty;
+    const q = Number(qty) || 0;
+    if (q <= 0) continue;
+
+    items.push({
+      id: menuItem.id,
+      name: menuItem.name,
+      price: menuItem.price,
+      quantity: q,
+      lineTotal: menuItem.price * q
+    });
+
+    total += menuItem.price * q;
   }
 
   return { items, total };
 }
 
-/**
- * PayFast signature encoding must match PHP's urlencode rules:
- * - spaces become +
- * - ~ becomes %7E
- * - ! ' ( ) * must be percent-encoded
- */
-function pfUrlEncode(value) {
-  return encodeURIComponent(String(value))
-    .replace(/%20/g, "+")
-    .replace(/[!'()*]/g, (c) =>
-      "%" + c.charCodeAt(0).toString(16).toUpperCase()
-    )
-    .replace(/%7E/g, "~") // PayFast examples often tolerate either; keep stable
-    .replace(/~/g, "%7E"); // enforce PHP style for "~"
-}
-
-function pfParamString(data) {
-  return Object.keys(data)
-    .filter((k) => data[k] !== undefined && data[k] !== null && data[k] !== "" && k !== "signature")
-    .sort()
-    .map((k) => `${k}=${pfUrlEncode(data[k])}`)
-    .join("&");
-}
-
-function pfSignature(data, passphrase) {
-  let str = pfParamString(data);
-  if (passphrase && String(passphrase).length > 0) {
-    str += `&passphrase=${pfUrlEncode(passphrase)}`;
-  }
-  return crypto.createHash("md5").update(str).digest("hex");
-}
-
-/* =====================================================
-   CART API
-   ===================================================== */
+// -------------------- Cart API --------------------
 app.get("/api/cart", (req, res) => {
-  if (!req.session.cart) req.session.cart = {};
-  res.json(buildCart(req.session.cart));
+  const { items, total } = buildCart(req);
+  res.json({ items, total });
 });
 
 app.post("/api/cart/add", (req, res) => {
   const { itemId, quantity = 1 } = req.body || {};
-  if (!MENU[itemId]) return res.status(400).json({ error: "Invalid item" });
+  const id = Number(itemId);
+  const qty = Number(quantity);
+
+  if (!MENU[id]) return res.status(400).json({ error: "Invalid itemId" });
+  if (!Number.isFinite(qty) || qty <= 0) return res.status(400).json({ error: "Invalid quantity" });
 
   if (!req.session.cart) req.session.cart = {};
-  req.session.cart[itemId] =
-    (req.session.cart[itemId] || 0) + Number(quantity || 1);
+  req.session.cart[id] = (req.session.cart[id] || 0) + qty;
 
-  res.json(buildCart(req.session.cart));
+  const { items, total } = buildCart(req);
+  res.json({ success: true, items, total });
 });
 
 app.post("/api/cart/remove", (req, res) => {
   const { itemId, quantity = 1 } = req.body || {};
-  if (!MENU[itemId]) return res.status(400).json({ error: "Invalid item" });
+  const id = Number(itemId);
+  const qty = Number(quantity);
+
+  if (!MENU[id]) return res.status(400).json({ error: "Invalid itemId" });
+  if (!Number.isFinite(qty) || qty <= 0) return res.status(400).json({ error: "Invalid quantity" });
 
   if (!req.session.cart) req.session.cart = {};
+  const current = req.session.cart[id] || 0;
+  const next = Math.max(0, current - qty);
 
-  req.session.cart[itemId] = Math.max(
-    0,
-    (req.session.cart[itemId] || 0) - Number(quantity || 1)
-  );
+  if (next === 0) delete req.session.cart[id];
+  else req.session.cart[id] = next;
 
-  if (req.session.cart[itemId] === 0) delete req.session.cart[itemId];
-
-  res.json(buildCart(req.session.cart));
+  const { items, total } = buildCart(req);
+  res.json({ success: true, items, total });
 });
 
-/* =====================================================
-   CHECKOUT → PAYFAST (SANDBOX)
-   ===================================================== */
-app.post("/api/checkout", (req, res) => {
-  if (!req.session.cart) req.session.cart = {};
-  const { items, total } = buildCart(req.session.cart);
+app.post("/api/cart/clear", (req, res) => {
+  req.session.cart = {};
+  res.json({ success: true });
+});
 
-  if (!items.length) return res.status(400).json({ error: "Cart is empty" });
-
-  const customer = req.body?.customer || {};
-  const name_first = String(customer.firstName || "").trim();
-  const name_last = String(customer.lastName || "").trim();
-  const email_address = String(customer.email || "").trim();
-  const cell_number = String(customer.phone || "").trim();
-
-  if (!name_first || !name_last || !email_address) {
-    return res.status(400).json({ error: "Missing customer details" });
+// -------------------- Paystack: Initialize --------------------
+app.post("/api/paystack/initialize", async (req, res) => {
+  if (!PAYSTACK_SECRET_KEY) {
+    return res.status(500).json({
+      error:
+        "Missing PAYSTACK_SECRET_KEY. In CMD: set PAYSTACK_SECRET_KEY=sk_test_xxx ثم npm start"
+    });
   }
 
-  // ✅ PayFast sandbox credentials (standard)
-  const merchant_id = "10000100";
-  const merchant_key = "46f0cd694581a";
-  const passphrase = ""; // keep empty for sandbox unless you set one
+  const { firstName, lastName, email, phone } = req.body || {};
 
-  const orderId = `ORDER-${Date.now()}`;
+  if (!firstName || !lastName || !email) {
+    return res.status(400).json({ error: "Please fill First Name, Last Name, and Email." });
+  }
 
-  const payfastData = {
-    merchant_id,
-    merchant_key,
+  if (!String(email).includes("@")) {
+    return res.status(400).json({ error: "Please enter a valid email." });
+  }
 
-    return_url: `http://localhost:${port}/success`,
-    cancel_url: `http://localhost:${port}/cancel`,
-    notify_url: `http://localhost:${port}/notify`,
+  const { items, total } = buildCart(req);
+  if (!items.length || total <= 0) {
+    return res.status(400).json({ error: "Cart is empty. Add items before checkout." });
+  }
 
-    m_payment_id: orderId,
-    amount: Number(total).toFixed(2),
+  const amountInCents = Math.round(total * 100);
+  const callback_url = `${getBaseUrl(req)}/paystack/callback`;
 
-    // Keep these simple (signature-safe)
-    item_name: "BraaiSpot Order",
-    item_description: items.map((i) => `${i.name} x${i.quantity}`).join(", "),
-
-    name_first,
-    name_last,
-    email_address,
-    cell_number,
+  // Save expected amount + cart snapshot
+  req.session.checkout = {
+    customer: { firstName, lastName, email, phone: phone || "" },
+    items,
+    total,
+    amountInCents
   };
 
-  // ✅ Correct signature
-  payfastData.signature = pfSignature(payfastData, passphrase);
+  // Debug logs
+  console.log("=== PAYSTACK INIT ===");
+  console.log("callback_url:", callback_url);
+  console.log("email:", email);
+  console.log("amountInCents:", amountInCents);
+  console.log("secretKeyStartsWith:", String(PAYSTACK_SECRET_KEY).slice(0, 8)); // should be sk_test_
+  console.log("=====================");
 
-  res.json({
-    payfastProcessUrl: "https://sandbox.payfast.co.za/eng/process",
-    payfastData,
-  });
+  try {
+    const payload = {
+      email,
+      amount: amountInCents,
+      callback_url,
+      metadata: {
+        customer: { firstName, lastName, phone: phone || "" },
+        cart_items: items,
+        cart_total: total
+      }
+    };
+
+    const resp = await fetch("https://api.paystack.co/transaction/initialize", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const raw = await resp.text();
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      data = { raw };
+    }
+
+    console.log("Paystack HTTP:", resp.status);
+    console.log("Paystack body:", data);
+
+    if (!resp.ok || !data.status) {
+      return res.status(400).json({
+        error: data.message || "Paystack rejected the request. Check server terminal logs."
+      });
+    }
+
+    // Save reference for verify step
+    req.session.checkout.reference = data.data.reference;
+
+    return res.json({
+      authorization_url: data.data.authorization_url,
+      reference: data.data.reference
+    });
+  } catch (err) {
+    console.error("Paystack initialize error (REAL):", err);
+
+    // Common TLS issue workaround (TESTING ONLY):
+    // set NODE_TLS_REJECT_UNAUTHORIZED=0
+    return res.status(500).json({
+      error:
+        "Server error initializing payment. Check server terminal error (network/SSL/proxy)."
+    });
+  }
 });
 
-/* =====================================================
-   PAYFAST ITN (DEV)
-   ===================================================== */
-app.post("/notify", (req, res) => {
-  // Local testing: just acknowledge
-  res.status(200).send("OK");
+// -------------------- Paystack: Callback Verify --------------------
+app.get("/paystack/callback", async (req, res) => {
+  if (!PAYSTACK_SECRET_KEY) return res.status(500).send("Missing PAYSTACK_SECRET_KEY");
+
+  const reference = req.query.reference;
+  if (!reference) return res.status(400).send("Missing reference");
+
+  try {
+    const verifyResp = await fetch(
+      `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
+      {
+        method: "GET",
+        headers: { Authorization: `Bearer ${PAYSTACK_SECRET_KEY}` }
+      }
+    );
+
+    const raw = await verifyResp.text();
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      data = { raw };
+    }
+
+    console.log("=== PAYSTACK VERIFY ===");
+    console.log("HTTP:", verifyResp.status);
+    console.log("body:", data);
+    console.log("======================");
+
+    if (!verifyResp.ok || !data.status) {
+      return res.redirect("/cancel");
+    }
+
+    const payStatus = data.data.status; // "success"
+    const paidAmount = Number(data.data.amount); // in cents
+    const expected = Number(req.session.checkout?.amountInCents || 0);
+
+    if (payStatus === "success" && paidAmount === expected) {
+      // Create receipt and clear cart
+      req.session.lastReceipt = {
+        reference,
+        total: (expected / 100).toFixed(2),
+        items: req.session.checkout?.items || [],
+        customer: req.session.checkout?.customer || null
+      };
+
+      req.session.cart = {};
+      req.session.checkout = null;
+
+      return res.redirect("/success");
+    }
+
+    return res.redirect("/cancel");
+  } catch (err) {
+    console.error("Paystack verify error:", err);
+    return res.redirect("/cancel");
+  }
 });
 
-/* =====================================================
-   PAGES
-   ===================================================== */
+// -------------------- Pages --------------------
 app.get("/success", (req, res) => {
-  req.session.cart = {};
+  const receipt = req.session.lastReceipt;
+
+  const itemsHtml = (receipt?.items || [])
+    .map((i) => `<li>${i.name} x${i.quantity} = R${(i.price * i.quantity).toFixed(2)}</li>`)
+    .join("");
+
   res.send(`
-    <h1>Payment Submitted</h1>
-    <p>Thank you for your order.</p>
-    <a href="/">Back to Menu</a>
+    <div style="font-family: Arial; max-width: 720px; margin: 40px auto;">
+      <h1>Payment Successful ✅</h1>
+      <p><b>Reference:</b> ${receipt?.reference || "N/A"}</p>
+      <p><b>Total Paid:</b> R${receipt?.total || "0.00"}</p>
+      <h3>Order Items</h3>
+      <ul>${itemsHtml}</ul>
+      <a href="/">Back to Menu</a>
+    </div>
   `);
 });
 
 app.get("/cancel", (req, res) => {
   res.send(`
-    <h1>Payment Cancelled</h1>
-    <a href="/">Back to Menu</a>
+    <div style="font-family: Arial; max-width: 720px; margin: 40px auto;">
+      <h1>Payment Not Completed ❌</h1>
+      <a href="/">Back to Menu</a>
+    </div>
   `);
 });
 
-/* =====================================================
-   START SERVER
-   ===================================================== */
+// -------------------- Start --------------------
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });
