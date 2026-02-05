@@ -1,19 +1,16 @@
 {
-  "name": "choir-main",
+  "name": "braai-spot",
   "version": "1.0.0",
-  "description": "A self-service food ordering website with cart functionality and PayFast payment integration.",
-  "main": "script.js",
+  "description": "Braai Spot self-service ordering with cart and Paystack checkout.",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
   },
-  "keywords": [],
-  "author": "",
   "license": "ISC",
   "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^5.2.1",
-    "express-session": "^1.18.2",
-    "helmet": "^8.1.0"
+    "cors": "^2.8.6",
+    "express": "^4.22.1",
+    "express-session": "^1.19.0",
+    "helmet": "^7.2.0"
   }
 }

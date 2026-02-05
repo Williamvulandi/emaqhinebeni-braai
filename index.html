@@ -240,13 +240,36 @@
             <div class="cart-section">
                 <h2>Your Order</h2>
                 <div id="cart-items"></div>
-                <div class="cart-total">Total: R<span id="cart-total">0</span></div>
+                <div class="cart-total">Total: R<span id="cart-total">0.00</span></div>
 
-                <div class="email-input-group">
-                    <input type="email" id="receipt-email" placeholder="Enter email for receipt" required>
+                <!-- ================= CUSTOMER DETAILS ================= -->
+                <div class="customer-form">
+                    <h3>Customer Details</h3>
+                    <label>
+                        First Name
+                        <input id="cust-first-name" type="text" placeholder="e.g. William" autocomplete="given-name"
+                            required>
+                    </label>
+                    <label>
+                        Last Name
+                        <input id="cust-last-name" type="text" placeholder="e.g. Vulandi" autocomplete="family-name"
+                            required>
+                    </label>
+                    <label>
+                        Email
+                        <input id="cust-email" type="email" placeholder="e.g. name@email.com" autocomplete="email"
+                            required>
+                    </label>
+                    <label>
+                        Phone (optional)
+                        <input id="cust-phone" type="tel" placeholder="e.g. 0712345678" autocomplete="tel">
+                    </label>
+                    <p class="cart-note" style="font-size: 0.9rem; color: #666; margin-top: 10px;">
+                        Secure payment via Paystack.
+                    </p>
                 </div>
 
-                <button id="checkout-btn" class="cta-button">Checkout</button>
+                <button id="checkout-btn" class="cta-button" style="margin-top: 20px;">Checkout & Pay</button>
             </div>
         </section>
     </main>
