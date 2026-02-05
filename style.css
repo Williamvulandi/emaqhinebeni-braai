@@ -90,9 +90,24 @@ nav {
     align-items: center;
     justify-content: center;
     position: relative;
-    background: white;
+    background-image: url('images/hero-bg.jpg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
     overflow: hidden;
     padding: 0 5%;
+}
+
+.hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    /* Dark overlay */
+    z-index: 0;
 }
 
 .hero-content {
@@ -107,18 +122,20 @@ nav {
     font-weight: 800;
     margin-bottom: 1.5rem;
     line-height: 1.1;
-    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-red) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    /* White text with subtle shadow since background is dark */
+    color: var(--white);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .hero p {
     font-size: 1.25rem;
-    color: var(--gray-text);
+    color: #E0E0E0;
+    /* Light gray for readability on dark */
     margin-bottom: 2.5rem;
     max-width: 600px;
     margin-left: auto;
     margin-right: auto;
+    font-weight: 500;
 }
 
 .cta-button {
@@ -399,4 +416,66 @@ footer {
 
 #checkout-btn:hover {
     background: var(--primary-dark);
+}
+
+/* Email Input */
+.email-input-group {
+    margin: 1rem 0;
+}
+
+#receipt-email {
+    width: 100%;
+    padding: 0.8rem;
+    border: 2px solid var(--off-white);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: border-color 0.3s ease;
+}
+
+#receipt-email:focus {
+    outline: none;
+    border-color: var(--primary-red);
+}
+
+/* Contact Buttons */
+.contact-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin: 1.5rem 0;
+    flex-wrap: wrap;
+}
+
+.contact-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.8rem 1.5rem;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 600;
+    color: white;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.contact-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+}
+
+.contact-btn.whatsapp {
+    background-color: #25D366;
+}
+
+.contact-btn.phone {
+    background-color: var(--primary-red);
+}
+
+.contact-text {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    color: var(--white);
+    letter-spacing: 1px;
 }

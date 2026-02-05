@@ -43,7 +43,7 @@
                 <!-- Pork Braai -->
                 <div class="menu-card fade-in" data-item-id="1">
                     <div class="card-image">
-                        <img src="images/pork.png" alt="Pork Braai">
+                        <img src="images/pork-belly-sliders.jpg" alt="Pork Braai">
                     </div>
                     <div class="card-details">
                         <div class="card-header">
@@ -51,6 +51,26 @@
                             <span class="price">R5</span>
                         </div>
                         <p>Succulent, flame-grilled pork seasoned to perfection.</p>
+                        <div class="quantity-controls">
+                            <button class="qty-btn minus">-</button>
+                            <span class="quantity">0</span>
+                            <button class="qty-btn plus">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Big Pork Braai -->
+                <div class="menu-card fade-in" data-item-id="10">
+                    <div class="card-image placeholder-gradient-2">
+                        <!-- Reusing pork image or placeholder -->
+                        <img src="images/pork-chops.png" alt="Big Pork Braai">
+                    </div>
+                    <div class="card-details">
+                        <div class="card-header">
+                            <h3>Big Pork Piece</h3>
+                            <span class="price">R10</span>
+                        </div>
+                        <p>Generous cut of flame-grilled pork.</p>
                         <div class="quantity-controls">
                             <button class="qty-btn minus">-</button>
                             <span class="quantity">0</span>
@@ -157,6 +177,63 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Pap + Pork + Chakalaka -->
+                <div class="menu-card fade-in" style="animation-delay: 0.6s;" data-item-id="7">
+                    <div class="card-image">
+                        <img src="images/pap_and_pork_fixed.png" alt="Pap + pork + chakalaka">
+                    </div>
+                    <div class="card-details">
+                        <div class="card-header">
+                            <h3>Pap + Pork + Chakalaka</h3>
+                            <span class="price">R35</span>
+                        </div>
+                        <p>Traditional pap served with pork and spicy chakalaka.</p>
+                        <div class="quantity-controls">
+                            <button class="qty-btn minus">-</button>
+                            <span class="quantity">0</span>
+                            <button class="qty-btn plus">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pap + Wings + Chakalaka -->
+                <div class="menu-card fade-in" style="animation-delay: 0.7s;" data-item-id="8">
+                    <div class="card-image">
+                        <img src="images/pap-wings.png" alt="Pap + wings + chakalaka">
+                    </div>
+                    <div class="card-details">
+                        <div class="card-header">
+                            <h3>Pap + Wings + Chakalaka</h3>
+                            <span class="price">R40</span>
+                        </div>
+                        <p>Crispy wings served with pap and chakalaka.</p>
+                        <div class="quantity-controls">
+                            <button class="qty-btn minus">-</button>
+                            <span class="quantity">0</span>
+                            <button class="qty-btn plus">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pap + Sausage + Chakalaka -->
+                <div class="menu-card fade-in" style="animation-delay: 0.8s;" data-item-id="9">
+                    <div class="card-image">
+                        <img src="images/Pap-+vorse.webp" alt="">
+                    </div>
+                    <div class="card-details">
+                        <div class="card-header">
+                            <h3>Pap + Wors + Chak.</h3>
+                            <span class="price">R30</span>
+                        </div>
+                        <p>Juicy sausage served with pap and chakalaka.</p>
+                        <div class="quantity-controls">
+                            <button class="qty-btn minus">-</button>
+                            <span class="quantity">0</span>
+                            <button class="qty-btn plus">+</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Cart Section -->
@@ -164,6 +241,11 @@
                 <h2>Your Order</h2>
                 <div id="cart-items"></div>
                 <div class="cart-total">Total: R<span id="cart-total">0</span></div>
+
+                <div class="email-input-group">
+                    <input type="email" id="receipt-email" placeholder="Enter email for receipt" required>
+                </div>
+
                 <button id="checkout-btn" class="cta-button">Checkout</button>
             </div>
         </section>
@@ -172,6 +254,18 @@
     <footer id="contact">
         <div class="footer-content">
             <div class="footer-brand">Braai<span class="highlight">Spot</span></div>
+
+            <div class="contact-buttons">
+                <a href="https://wa.me/27676827139" target="_blank" class="contact-btn whatsapp">
+                    Chat on WhatsApp
+                </a>
+                <a href="tel:+27676827139" class="contact-btn phone">
+                    Call Us
+                </a>
+            </div>
+
+            <p class="contact-text">+27 67 682 7139</p>
+
             <p>&copy; 2026 Braai Spot. All rights reserved.</p>
         </div>
     </footer>
