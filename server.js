@@ -16,7 +16,7 @@ const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || "";
 const MENU = {
   1: { id: 1, name: "Pork Braai Piece", price: 5 },
   2: { id: 2, name: "Chicken Feet", price: 1 },
-  3: { id: 3, name: "Liver Stick", price: 10 },
+  3: { id: 3, name: "Kebabs", price: 10 },
   4: { id: 4, name: "Small Fat Cake", price: 1 },
   5: { id: 5, name: "Chicken Wings", price: 8 },
   6: { id: 6, name: "Sausage Pieces", price: 6 },

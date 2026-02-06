@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Braai Spot | Premium Street Food</title>
+    <title>Emaqhinebeni | Premium Street Food</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
@@ -14,7 +14,7 @@
 <body>
     <header class="glass-header">
         <nav>
-            <div class="logo">Braai<span class="highlight">Spot</span></div>
+            <div class="logo">Emaqhi<span class="highlight">nebeni</span></div>
             <ul class="nav-links">
                 <li><a href="#home">Home</a></li>
                 <li><a href="#menu">Menu</a></li>
@@ -79,17 +79,17 @@
                     </div>
                 </div>
 
-                <!-- Chicken Feet -->
-                <div class="menu-card fade-in" style="animation-delay: 0.1s;" data-item-id="2">
+                <!-- Pap + Sausage + Chakalaka (Moved here) -->
+                <div class="menu-card fade-in" style="animation-delay: 0.1s;" data-item-id="9">
                     <div class="card-image">
-                        <img src="images/chicken_feet.png" alt="Chicken Feet">
+                        <img src="images/Pap-+vorse.webp" alt="">
                     </div>
                     <div class="card-details">
                         <div class="card-header">
-                            <h3>Chicken Feet</h3>
-                            <span class="price">R1</span>
+                            <h3>Pap + Wors + Chak.</h3>
+                            <span class="price">R30</span>
                         </div>
-                        <p>Traditional "Maotwana" cooked in a savory spicy sauce.</p>
+                        <p>Juicy sausage served with pap and chakalaka.</p>
                         <div class="quantity-controls">
                             <button class="qty-btn minus">-</button>
                             <span class="quantity">0</span>
@@ -107,7 +107,7 @@
                     </div>
                     <div class="card-details">
                         <div class="card-header">
-                            <h3>Liver Stick</h3>
+                            <h3>Kebabs</h3>
                             <span class="price">R10</span>
                         </div>
                         <p>Rich liver mixed with fat, grilled on a stick.</p>
@@ -139,6 +139,7 @@
                         </div>
                     </div>
                 </div>
+
 
                 <!-- Chicken Wings -->
                 <div class="menu-card fade-in" style="animation-delay: 0.4s;" data-item-id="5">
@@ -215,18 +216,17 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Pap + Sausage + Chakalaka -->
-                <div class="menu-card fade-in" style="animation-delay: 0.8s;" data-item-id="9">
+                <!-- Chicken Feet (Moved here) -->
+                <div class="menu-card fade-in" style="animation-delay: 0.8s;" data-item-id="2">
                     <div class="card-image">
-                        <img src="images/Pap-+vorse.webp" alt="">
+                        <img src="images/chicken_feet.png" alt="Chicken Feet">
                     </div>
                     <div class="card-details">
                         <div class="card-header">
-                            <h3>Pap + Wors + Chak.</h3>
-                            <span class="price">R30</span>
+                            <h3>Chicken Feet</h3>
+                            <span class="price">R1</span>
                         </div>
-                        <p>Juicy sausage served with pap and chakalaka.</p>
+                        <p>Traditional "Maotwana" cooked in a savory spicy sauce.</p>
                         <div class="quantity-controls">
                             <button class="qty-btn minus">-</button>
                             <span class="quantity">0</span>
@@ -234,11 +234,13 @@
                         </div>
                     </div>
                 </div>
+
+
             </div>
 
             <!-- Cart Section -->
             <div class="cart-section">
-                <h2>Your Order</h2>
+                <h2>Your Order <span id="cart-count" class="badge">0</span></h2>
                 <div id="cart-items"></div>
                 <div class="cart-total">Total: R<span id="cart-total">0.00</span></div>
 
@@ -276,7 +278,7 @@
 
     <footer id="contact">
         <div class="footer-content">
-            <div class="footer-brand">Braai<span class="highlight">Spot</span></div>
+            <div class="footer-brand">Emaqhi<span class="highlight">nebeni</span></div>
 
             <div class="contact-buttons">
                 <a href="https://wa.me/27676827139" target="_blank" class="contact-btn whatsapp">
@@ -289,7 +291,7 @@
 
             <p class="contact-text">+27 67 682 7139</p>
 
-            <p>&copy; 2026 Braai Spot. All rights reserved.</p>
+            <p>&copy; 2026 Emaqhinebeni. All rights reserved.</p>
         </div>
     </footer>
 
