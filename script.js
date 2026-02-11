@@ -1,5 +1,12 @@
 // Braai Spot - Script
+let authState = {
+  authenticated: false,
+  user: null
+};
+
 document.addEventListener("DOMContentLoaded", () => {
+  // Check authentication status first
+  checkAuthStatus();
   // -------------------- Fade-in animations --------------------
   const observer = new IntersectionObserver(
     (entries, obs) => {
@@ -126,6 +133,16 @@ document.addEventListener("DOMContentLoaded", () => {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ itemId, quantity: 1 })
           });
+
+          if (res.status === 401) {
+            showToast("Please log in to add items to cart", "error");
+            quantitySpan.textContent = startQty; // Revert
+            setTimeout(() => {
+              document.getElementById("login-modal").classList.add("active");
+            }, 1000);
+            return;
+          }
+
           if (!res.ok) throw new Error("Add failed");
           showToast(`Added ${itemName} to cart`);
         } else if (this.classList.contains("minus") && startQty > 0) {
@@ -136,6 +153,16 @@ document.addEventListener("DOMContentLoaded", () => {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ itemId, quantity: 1 })
           });
+
+          if (res.status === 401) {
+            showToast("Please log in first", "error");
+            quantitySpan.textContent = startQty; // Revert
+            setTimeout(() => {
+              document.getElementById("login-modal").classList.add("active");
+            }, 1000);
+            return;
+          }
+
           if (!res.ok) throw new Error("Remove failed");
           showToast(`Removed ${itemName}`, "success");
         }
@@ -206,6 +233,287 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Initial Load
-  updateCartDisplay();
+  // -------------------- Authentication Functions --------------------
+  async function checkAuthStatus() {
+    try {
+      const res = await fetch("/api/auth/me");
+      const data = await res.json();
+
+      if (data.authenticated) {
+        authState.authenticated = true;
+        authState.user = data.user;
+        updateAuthUI();
+        updateCartDisplay(); // Load cart after auth check
+      } else {
+        authState.authenticated = false;
+        authState.user = null;
+        updateAuthUI();
+      }
+    } catch (err) {
+      console.error("Auth check failed:", err);
+      authState.authenticated = false;
+      updateAuthUI();
+    }
+  }
+
+  function updateAuthUI() {
+    const authButtons = document.getElementById("auth-buttons");
+    const userInfo = document.getElementById("user-info");
+    const userName = document.getElementById("user-name");
+    const verificationBanner = document.getElementById("verification-banner");
+
+    if (authState.authenticated && authState.user) {
+      authButtons.style.display = "none";
+      userInfo.style.display = "flex";
+      userName.textContent = `Hi, ${authState.user.firstName}`;
+
+      // Show verification banner if not verified
+      if (verificationBanner) {
+        verificationBanner.style.display = authState.user.emailVerified ? "none" : "block";
+      }
+    } else {
+      authButtons.style.display = "flex";
+      userInfo.style.display = "none";
+      if (verificationBanner) {
+        verificationBanner.style.display = "none";
+      }
+    }
+  }
+
+  // Modal controls
+  const loginModal = document.getElementById("login-modal");
+  const signupModal = document.getElementById("signup-modal");
+  const forgotPasswordModal = document.getElementById("forgot-password-modal");
+  const verifyModal = document.getElementById("verify-modal");
+
+  const loginBtn = document.getElementById("login-btn");
+  const signupBtn = document.getElementById("signup-btn");
+  const logoutBtn = document.getElementById("logout-btn");
+  const forgotPasswordLink = document.getElementById("forgot-password-link");
+  const forgotToLogin = document.getElementById("forgot-to-login");
+
+  loginBtn?.addEventListener("click", () => {
+    loginModal.classList.add("active");
+  });
+
+  signupBtn?.addEventListener("click", () => {
+    signupModal.classList.add("active");
+  });
+
+  forgotPasswordLink?.addEventListener("click", (e) => {
+    e.preventDefault();
+    loginModal.classList.remove("active");
+    forgotPasswordModal.classList.add("active");
+  });
+
+  forgotToLogin?.addEventListener("click", (e) => {
+    e.preventDefault();
+    forgotPasswordModal.classList.remove("active");
+    loginModal.classList.add("active");
+  });
+
+  // Close modals
+  document.querySelectorAll(".modal-close").forEach(closeBtn => {
+    closeBtn.addEventListener("click", function () {
+      const modalId = this.getAttribute("data-modal");
+      document.getElementById(modalId).classList.remove("active");
+    });
+  });
+
+  // Close modal on background click
+  document.querySelectorAll(".modal").forEach(modal => {
+    modal.addEventListener("click", function (e) {
+      if (e.target === this) {
+        this.classList.remove("active");
+      }
+    });
+  });
+
+  // Switch between login and signup
+  document.getElementById("switch-to-signup")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    loginModal.classList.remove("active");
+    signupModal.classList.add("active");
+  });
+
+  document.getElementById("switch-to-login")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    signupModal.classList.remove("active");
+    loginModal.classList.add("active");
+  });
+
+  // Signup form
+  document.getElementById("signup-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const firstName = document.getElementById("signup-firstname").value.trim();
+    const lastName = document.getElementById("signup-lastname").value.trim();
+    const email = document.getElementById("signup-email").value.trim();
+    const password = document.getElementById("signup-password").value;
+
+    try {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, firstName, lastName })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        // Stop auto-login: authState should NOT be updated here
+        // authState.authenticated = true;
+        // authState.user = data.user;
+        // updateAuthUI();
+
+        signupModal.classList.remove("active");
+        verifyModal.classList.add("active");
+        showToast(data.message || `Welcome, ${firstName}! Please verify your email.`, "success");
+        // updateCartDisplay(); // Cart will fail if not authenticated anyway
+      } else {
+        showToast(data.error || "Signup failed", "error");
+      }
+    } catch (err) {
+      console.error("Signup error:", err);
+      showToast("Connection error. Please try again.", "error");
+    }
+  });
+
+  // Login form
+  document.getElementById("login-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const email = document.getElementById("login-email").value.trim();
+    const password = document.getElementById("login-password").value;
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        authState.authenticated = true;
+        authState.user = data.user;
+        updateAuthUI();
+        loginModal.classList.remove("active");
+
+        if (!data.user.emailVerified) {
+          verifyModal.classList.add("active");
+          showToast("Please verify your email address.", "info");
+        } else {
+          showToast(`Welcome back, ${data.user.firstName}!`, "success");
+        }
+
+        updateCartDisplay();
+      } else {
+        showToast(data.error || "Login failed", "error");
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      showToast("Connection error. Please try again.", "error");
+    }
+  });
+
+  // Logout
+  logoutBtn?.addEventListener("click", async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      authState.authenticated = false;
+      authState.user = null;
+      updateAuthUI();
+      showToast("Logged out successfully", "success");
+
+      // Clear cart display
+      cartItemsDiv.innerHTML = "<p>Your cart is empty.</p>";
+      cartTotalSpan.textContent = "0.00";
+      document.querySelectorAll(".quantity").forEach(qty => qty.textContent = "0");
+      const badge = document.getElementById("cart-count");
+      if (badge) badge.textContent = "0";
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
+  });
+
+  // Forgot Password form
+  document.getElementById("forgot-password-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("forgot-email").value.trim();
+
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message, "success");
+        forgotPasswordModal.classList.remove("active");
+      } else {
+        showToast(data.error || "Request failed", "error");
+      }
+    } catch (err) {
+      showToast("Connection error", "error");
+    }
+  });
+
+  // Verify Code form
+  document.getElementById("verify-code-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const code = document.getElementById("verify-code-input").value.trim();
+
+    try {
+      const res = await fetch("/api/auth/verify-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        showToast("Email verified successfully!", "success");
+        verifyModal.classList.remove("active");
+        if (authState.user) authState.user.emailVerified = true;
+        updateAuthUI();
+      } else {
+        showToast(data.error || "Verification failed", "error");
+      }
+    } catch (err) {
+      console.error("Verification error:", err);
+      showToast("Connection error. Please try again.", "error");
+    }
+  });
+
+  // Resend logic
+  const handleResend = async (e) => {
+    if (e) e.preventDefault();
+    try {
+      const res = await fetch("/api/auth/resend-verification", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message || "New verification code sent!", "success");
+      } else {
+        showToast(data.error || "Failed to resend code", "error");
+      }
+    } catch (err) {
+      showToast("Connection error", "error");
+    }
+  };
+
+  document.getElementById("resend-code-btn")?.addEventListener("click", handleResend);
+  document.getElementById("resend-verification-btn")?.addEventListener("click", handleResend);
+  document.getElementById("open-verify-btn")?.addEventListener("click", () => {
+    verifyModal.classList.add("active");
+  });
+
+  // Initial Load - only if authenticated
+  if (!authState.authenticated) {
+    // Show message to log in
+    cartItemsDiv.innerHTML = "<p style='text-align: center; color: var(--gray-text);'>Please log in to start ordering</p>";
+  }
 });

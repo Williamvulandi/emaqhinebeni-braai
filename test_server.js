@@ -1,5 +1,7 @@
 const http = require('http');
 
+let sessionCookie = null;
+
 function postRequest(path, data) {
     return new Promise((resolve, reject) => {
         const options = {
@@ -8,16 +10,27 @@ function postRequest(path, data) {
             path: path,
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                // Keep session cookie if we were doing robust testing, but for quick check:
-                // We'll see if endpoints respond without error first.
+                'Content-Type': 'application/json'
             }
         };
 
+        if (sessionCookie) {
+            options.headers['Cookie'] = sessionCookie;
+        }
+
         const req = http.request(options, (res) => {
+            const setCookie = res.headers['set-cookie'];
+            if (setCookie) {
+                sessionCookie = setCookie[0].split(';')[0];
+            }
+
             let body = '';
             res.on('data', (chunk) => body += chunk);
-            res.on('end', () => resolve({ status: res.statusCode, body: body }));
+            res.on('end', () => {
+                let parsedBody;
+                try { parsedBody = JSON.parse(body); } catch (e) { parsedBody = body; }
+                resolve({ status: res.statusCode, body: parsedBody });
+            });
         });
 
         req.on('error', (e) => reject(e));
@@ -28,11 +41,26 @@ function postRequest(path, data) {
 
 function getRequest(path) {
     return new Promise((resolve, reject) => {
-        const options = { hostname: 'localhost', port: 3000, path: path, method: 'GET' };
+        const options = {
+            hostname: 'localhost',
+            port: 3000,
+            path: path,
+            method: 'GET',
+            headers: {}
+        };
+
+        if (sessionCookie) {
+            options.headers['Cookie'] = sessionCookie;
+        }
+
         const req = http.request(options, (res) => {
             let body = '';
             res.on('data', (chunk) => body += chunk);
-            res.on('end', () => resolve({ status: res.statusCode, body: body }));
+            res.on('end', () => {
+                let parsedBody;
+                try { parsedBody = JSON.parse(body); } catch (e) { parsedBody = body; }
+                resolve({ status: res.statusCode, body: parsedBody });
+            });
         });
         req.on('error', (e) => reject(e));
         req.end();
@@ -40,38 +68,75 @@ function getRequest(path) {
 }
 
 async function runTests() {
-    console.log("Starting Unit Tests...");
+    console.log("Starting End-to-End Server Tests...");
+    const testEmail = `test_server_${Date.now()}@example.com`;
+    const testPass = 'password123';
 
     try {
-        // 1. Test Cart API
-        console.log("Tesing GET /api/cart...");
+        // 1. Signup
+        console.log("1. Testing POST /api/auth/signup...");
+        const signupRes = await postRequest('/api/auth/signup', {
+            email: testEmail,
+            password: testPass,
+            firstName: "Test",
+            lastName: "User"
+        });
+        if (signupRes.status === 200) console.log("✅ Signup request successful");
+        else throw new Error(`Signup failed: ${JSON.stringify(signupRes.body)}`);
+
+        // Get code from database since it's not in logs anymore
+        const db = require('./database');
+        await db.initDatabase();
+        const user = db.getUserByEmail(testEmail);
+        const code = user.verificationToken;
+        console.log(`ℹ️ Retrieved verification code from DB: ${code}`);
+
+        // 2. Verify Code
+        console.log("2. Testing POST /api/auth/verify-code...");
+        const verifyRes = await postRequest('/api/auth/verify-code', { code });
+        if (verifyRes.status === 200) console.log("✅ Verification successful");
+        else throw new Error(`Verification failed: ${JSON.stringify(verifyRes.body)}`);
+
+        // 3. Login
+        console.log("3. Testing POST /api/auth/login...");
+        const loginRes = await postRequest('/api/auth/login', { email: testEmail, password: testPass });
+        if (loginRes.status === 200) console.log("✅ Login successful");
+        else throw new Error(`Login failed: ${JSON.stringify(loginRes.body)}`);
+
+        // 4. Test Cart API
+        console.log("4. Testing GET /api/cart...");
         const cartRes = await getRequest('/api/cart');
         if (cartRes.status === 200) console.log("✅ Cart API working");
-        else console.error("❌ Cart API failed", cartRes);
+        else throw new Error(`Cart API failed: ${JSON.stringify(cartRes.body)}`);
 
-        // 2. Test Add Item (Mock)
-        // Note: Without cookie persistence in this simple script, session won't persist across requests
-        // But we can check if the server *accepts* the request cleanly.
-        console.log("Testing POST /api/cart/add...");
-        const addRes = await postRequest('/api/cart/add', { itemId: 1, quantity: 1 });
-        if (addRes.status === 200) console.log("✅ Add to Cart API working");
-        else console.error("❌ Add to Cart API failed", addRes);
+        // 5. Test Add Item
+        console.log("5. Testing POST /api/cart/add...");
+        const addRes = await postRequest('/api/cart/add', { itemId: 1, quantity: 2 });
+        if (addRes.status === 200) {
+            console.log("✅ Add to Cart API working");
+            if (addRes.body.total === 10) console.log("✅ Cart total correct (R10)");
+            else console.error("❌ Cart total incorrect", addRes.body.total);
+        }
+        else throw new Error(`Add to Cart API failed: ${JSON.stringify(addRes.body)}`);
 
-        // 3. Test Paystack Init (Expected Failure without Key)
-        console.log("Testing POST /api/paystack/initialize (expecting failure or key error)...");
+        // 6. Test Paystack Init
+        console.log("6. Testing POST /api/paystack/initialize...");
         const initRes = await postRequest('/api/paystack/initialize', {
-            firstName: "Test", lastName: "User", email: "test@example.com"
+            firstName: "Test", lastName: "User", email: testEmail
         });
 
-        // Since we likely don't have the secret key set in this environment, it should return 500 or 400.
-        // But receiving a structured JSON response proves the endpoint is active.
-        console.log(`ℹ️ Paystack Init Status: ${initRes.status}`);
-        console.log(`ℹ️ Response: ${initRes.body}`);
-        console.log("✅ Server responded (test passed if server is running)");
+        if (initRes.status === 500 && initRes.body.error.includes("Missing PAYSTACK_SECRET_KEY")) {
+            console.log("✅ Paystack Init handled missing key correctly (Status 500)");
+        } else {
+            console.log(`ℹ️ Paystack Init Status: ${initRes.status}`);
+            console.log(`ℹ️ Response: ${JSON.stringify(initRes.body)}`);
+        }
+
+        console.log("\n--- ALL SERVER TESTS PASSED ---");
 
     } catch (e) {
-        console.error("❌ Test failed. Is the server running? Run 'node server.js' first.");
-        console.error(e);
+        console.error("\n❌ Test failed!");
+        console.error(e.message || e);
     }
 }
 

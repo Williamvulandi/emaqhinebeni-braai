@@ -2,6 +2,8 @@ const express = require("express");
 const session = require("express-session");
 const cors = require("cors");
 const helmet = require("helmet");
+const db = require("./database");
+const emailService = require("./email");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -50,6 +52,37 @@ app.use(
 // Serve your static files from project root
 app.use(express.static("."));
 
+// Initialize database
+let dbReady = false;
+db.initDatabase().then(() => {
+  dbReady = true;
+  console.log('✅ Database ready');
+}).catch(err => {
+  console.error('❌ Database initialization failed:', err);
+});
+
+// Auth middleware
+function requireAuth(req, res, next) {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  next();
+}
+
+// Email verification middleware
+function requireVerified(req, res, next) {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const user = db.getUserById(req.session.userId);
+  if (!user || !user.emailVerified) {
+    return res.status(403).json({ error: 'Please verify your email first' });
+  }
+
+  next();
+}
+
 // -------------------- Helpers --------------------
 function getBaseUrl(req) {
   // Works on localhost and behind ngrok (x-forwarded-proto becomes https)
@@ -57,8 +90,8 @@ function getBaseUrl(req) {
   return `${proto}://${req.get("host")}`;
 }
 
-function buildCart(req) {
-  const cart = req.session.cart || {};
+function buildCart(userId) {
+  const cart = db.getUserCart(userId);
   const items = [];
   let total = 0;
 
@@ -84,13 +117,279 @@ function buildCart(req) {
   return { items, total };
 }
 
-// -------------------- Cart API --------------------
-app.get("/api/cart", (req, res) => {
-  const { items, total } = buildCart(req);
+// -------------------- Authentication API --------------------
+app.post("/api/auth/signup", async (req, res) => {
+  try {
+    let { email, password, firstName, lastName } = req.body;
+
+    if (!email || !password || !firstName || !lastName) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    // Auto-fix common igmail typo for the user
+    if (email.toLowerCase().includes('@igmail.com')) {
+      email = email.toLowerCase().replace('@igmail.com', '@gmail.com');
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    // Send verification email (don't block on this)
+    emailService.sendVerificationEmail(user.email, user.firstName, user.verificationToken)
+      .catch(err => console.error('Failed to send verification email:', err));
+
+    // req.session.userId = user.id; // Removed to prevent auto-login before verification
+
+    const message = user.isExisting
+      ? 'Welcome back! Your account was not yet verified. A new verification code has been sent to your email.'
+      : 'Account created! Please check your email for your 6-digit verification code.';
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        emailVerified: false
+      },
+      message
+    });
+  } catch (err) {
+    console.error('Signup error:', err);
+    res.status(400).json({ error: err.message || 'Signup failed' });
+  }
+});
+
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    let { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    // Auto-fix common igmail typo
+    if (email.toLowerCase().includes('@igmail.com')) {
+      email = email.toLowerCase().replace('@igmail.com', '@gmail.com');
+    }
+
+    const user = await db.authenticateUser(email, password);
+    req.session.userId = user.id;
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        emailVerified: user.emailVerified
+      }
+    });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(401).json({ error: 'Invalid credentials' });
+  }
+});
+
+app.post("/api/auth/logout", (req, res) => {
+  req.session.destroy();
+  res.json({ success: true });
+});
+
+app.get("/api/auth/me", (req, res) => {
+  if (!req.session.userId) {
+    return res.json({ authenticated: false });
+  }
+
+  const user = db.getUserById(req.session.userId);
+  if (!user) {
+    return res.json({ authenticated: false });
+  }
+
+  res.json({
+    authenticated: true,
+    user: {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      emailVerified: user.emailVerified
+    }
+  });
+});
+
+// Email verification endpoint (Link) - Support both /verify-email and /api/auth/verify
+app.get(["/api/auth/verify/:token", "/verify-email"], async (req, res) => {
+  try {
+    const token = req.params.token || req.query.token;
+    if (!token) throw new Error('Token is missing');
+
+    const userId = db.verifyEmail(token);
+
+    // Auto-login the user ONLY AFTER successful verification
+    req.session.userId = userId;
+
+    // Redirect to success page
+    res.redirect('/verify-success');
+  } catch (err) {
+    console.error('Verification error:', err);
+    res.redirect('/verify-error');
+  }
+});
+
+// Email verification endpoint (Code)
+app.post("/api/auth/verify-code", async (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code) return res.status(400).json({ error: 'Verification code is required' });
+
+    const userId = db.verifyEmail(code);
+    req.session.userId = userId;
+
+    res.json({ success: true, message: 'Email verified successfully!' });
+  } catch (err) {
+    console.error('Verification error:', err);
+    res.status(400).json({ error: err.message || 'Invalid verification code' });
+  }
+});
+
+// Forgot password endpoint
+app.post("/api/auth/forgot-password", async (req, res) => {
+  try {
+    const { email: userEmail } = req.body;
+    if (!userEmail) return res.status(400).json({ error: 'Email is required' });
+
+    const user = db.getUserByEmail(userEmail);
+    if (user) {
+      const token = db.createResetToken(userEmail);
+      emailService.sendPasswordResetEmail(user.email, user.firstName, token)
+        .catch(err => console.error('Failed to send reset email:', err));
+    }
+
+    // Always return success to prevent email enumeration
+    res.json({ success: true, message: 'If an account exists with that email, a reset link has been sent.' });
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    res.status(500).json({ error: 'Failed to process request' });
+  }
+});
+
+// Reset password endpoint
+app.post("/api/auth/reset-password", async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) return res.status(400).json({ error: 'Token and password are required' });
+    if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+
+    await db.resetPassword(token, password);
+    res.json({ success: true, message: 'Password has been reset successfully.' });
+  } catch (err) {
+    console.error('Reset password error:', err);
+    res.status(400).json({ error: err.message || 'Failed to reset password' });
+  }
+});
+
+app.get("/reset-password", (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.redirect('/');
+
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Reset Password - Emaqhinebeni</title>
+      <style>
+        body { font-family: 'Inter', Arial, sans-serif; background: #F8F9FA; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        h1 { color: #0A1E2F; margin-bottom: 1.5rem; text-align: center; }
+        input { width: 100%; padding: 0.75rem; margin-bottom: 1rem; border: 2px solid #EEE; border-radius: 10px; box-sizing: border-box; }
+        button { width: 100%; padding: 0.75rem; border: none; border-radius: 50px; background: #EF3125; color: white; font-weight: 600; cursor: pointer; }
+        .success { color: #25D366; text-align: center; display: none; }
+        .error { color: #EF3125; text-align: center; margin-bottom: 1rem; display: none; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <h1>Reset Password</h1>
+        <div id="error" class="error"></div>
+        <div id="success" class="success">✅ Password reset! Redirecting to login...</div>
+        <form id="resetForm">
+          <input type="password" id="password" placeholder="New Password (min 6 chars)" required minlength="6">
+          <input type="password" id="confirmPassword" placeholder="Confirm New Password" required minlength="6">
+          <button type="submit">Reset Password</button>
+        </form>
+      </div>
+      <script>
+        document.getElementById('resetForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const password = document.getElementById('password').value;
+          const confirmPassword = document.getElementById('confirmPassword').value;
+          const errorDiv = document.getElementById('error');
+          const successDiv = document.getElementById('success');
+          
+          if (password !== confirmPassword) {
+            errorDiv.textContent = 'Passwords do not match';
+            errorDiv.style.display = 'block';
+            return;
+          }
+          
+          try {
+            const res = await fetch('/api/auth/reset-password', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token: '${token}', password })
+            });
+            const data = await res.json();
+            if (res.ok) {
+              successDiv.style.display = 'block';
+              document.getElementById('resetForm').style.display = 'none';
+              setTimeout(() => window.location.href = '/', 3000);
+            } else {
+              errorDiv.textContent = data.error || 'Failed to reset password';
+              errorDiv.style.display = 'block';
+            }
+          } catch (err) {
+            errorDiv.textContent = 'Connection error';
+            errorDiv.style.display = 'block';
+          }
+        });
+      </script>
+    </body>
+    </html>
+  `);
+});
+
+// Resend verification email
+app.post("/api/auth/resend-verification", requireAuth, async (req, res) => {
+  try {
+    const user = db.getUserById(req.session.userId);
+
+    if (user.emailVerified) {
+      return res.status(400).json({ error: 'Email already verified' });
+    }
+
+    const newToken = db.resendVerificationToken(req.session.userId);
+    await emailService.sendVerificationEmail(user.email, user.firstName, newToken);
+
+    res.json({ success: true, message: 'Verification email sent!' });
+  } catch (err) {
+    console.error('Resend verification error:', err);
+    res.status(500).json({ error: 'Failed to resend verification email' });
+  }
+});
+
+// -------------------- Cart API (Protected - Requires Verified Email) --------------------
+app.get("/api/cart", requireVerified, (req, res) => {
+  const { items, total } = buildCart(req.session.userId);
   res.json({ items, total });
 });
 
-app.post("/api/cart/add", (req, res) => {
+app.post("/api/cart/add", requireVerified, (req, res) => {
   const { itemId, quantity = 1 } = req.body || {};
   const id = Number(itemId);
   const qty = Number(quantity);
@@ -98,14 +397,18 @@ app.post("/api/cart/add", (req, res) => {
   if (!MENU[id]) return res.status(400).json({ error: "Invalid itemId" });
   if (!Number.isFinite(qty) || qty <= 0) return res.status(400).json({ error: "Invalid quantity" });
 
-  if (!req.session.cart) req.session.cart = {};
-  req.session.cart[id] = (req.session.cart[id] || 0) + qty;
+  // Get current quantity from DB
+  const cart = db.getUserCart(req.session.userId);
+  const currentQty = cart[id] || 0;
+  const newQty = currentQty + qty;
 
-  const { items, total } = buildCart(req);
+  db.updateCartItem(req.session.userId, id, newQty);
+
+  const { items, total } = buildCart(req.session.userId);
   res.json({ success: true, items, total });
 });
 
-app.post("/api/cart/remove", (req, res) => {
+app.post("/api/cart/remove", requireVerified, (req, res) => {
   const { itemId, quantity = 1 } = req.body || {};
   const id = Number(itemId);
   const qty = Number(quantity);
@@ -113,19 +416,19 @@ app.post("/api/cart/remove", (req, res) => {
   if (!MENU[id]) return res.status(400).json({ error: "Invalid itemId" });
   if (!Number.isFinite(qty) || qty <= 0) return res.status(400).json({ error: "Invalid quantity" });
 
-  if (!req.session.cart) req.session.cart = {};
-  const current = req.session.cart[id] || 0;
+  // Get current quantity from DB
+  const cart = db.getUserCart(req.session.userId);
+  const current = cart[id] || 0;
   const next = Math.max(0, current - qty);
 
-  if (next === 0) delete req.session.cart[id];
-  else req.session.cart[id] = next;
+  db.updateCartItem(req.session.userId, id, next);
 
-  const { items, total } = buildCart(req);
+  const { items, total } = buildCart(req.session.userId);
   res.json({ success: true, items, total });
 });
 
-app.post("/api/cart/clear", (req, res) => {
-  req.session.cart = {};
+app.post("/api/cart/clear", requireVerified, (req, res) => {
+  db.clearUserCart(req.session.userId);
   res.json({ success: true });
 });
 
@@ -148,7 +451,11 @@ app.post("/api/paystack/initialize", async (req, res) => {
     return res.status(400).json({ error: "Please enter a valid email." });
   }
 
-  const { items, total } = buildCart(req);
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Please log in to checkout." });
+  }
+
+  const { items, total } = buildCart(req.session.userId);
   if (!items.length || total <= 0) {
     return res.status(400).json({ error: "Cart is empty. Add items before checkout." });
   }
@@ -272,7 +579,7 @@ app.get("/paystack/callback", async (req, res) => {
         customer: req.session.checkout?.customer || null
       };
 
-      req.session.cart = {};
+      db.clearUserCart(req.session.userId);
       req.session.checkout = null;
 
       return res.redirect("/success");
@@ -283,6 +590,29 @@ app.get("/paystack/callback", async (req, res) => {
     console.error("Paystack verify error:", err);
     return res.redirect("/cancel");
   }
+});
+
+// -------------------- Verification Pages --------------------
+app.get("/verify-success", (req, res) => {
+  res.send(`
+    <div style="font-family: Arial; max-width: 720px; margin: 40px auto; text-align: center;">
+      <h1 style="color: #25D366;">✅ Email Verified!</h1>
+      <p style="font-size: 1.1rem; margin: 20px 0;">Your email has been successfully verified.</p>
+      <p>You can now add items to your cart and place orders!</p>
+      <a href="/" style="display: inline-block; margin-top: 20px; padding: 12px 30px; background: #EF3125; color: white; text-decoration: none; border-radius: 50px; font-weight: 600;">Go to Menu</a>
+    </div>
+  `);
+});
+
+app.get("/verify-error", (req, res) => {
+  res.send(`
+    <div style="font-family: Arial; max-width: 720px; margin: 40px auto; text-align: center;">
+      <h1 style="color: #EF3125;">❌ Verification Failed</h1>
+      <p style="font-size: 1.1rem; margin: 20px 0;">The verification link is invalid or has expired.</p>
+      <p>Please request a new verification email from your account.</p>
+      <a href="/" style="display: inline-block; margin-top: 20px; padding: 12px 30px; background: #EF3125; color: white; text-decoration: none; border-radius: 50px; font-weight: 600;">Go to Home</a>
+    </div>
+  `);
 });
 
 // -------------------- Pages --------------------

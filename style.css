@@ -648,3 +648,180 @@ footer {
 .toast.error {
     border-left: 4px solid var(--primary-red);
 }
+
+/* Authentication Section */
+.auth-section {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.auth-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.auth-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.auth-btn:not(.primary) {
+    background: transparent;
+    color: var(--primary-dark);
+    border: 2px solid var(--off-white);
+}
+
+.auth-btn:not(.primary):hover {
+    border-color: var(--primary-red);
+    color: var(--primary-red);
+}
+
+.auth-btn.primary {
+    background: var(--primary-red);
+    color: white;
+}
+
+.auth-btn.primary:hover {
+    background: var(--primary-dark);
+    box-shadow: 0 4px 12px rgba(239, 49, 37, 0.3);
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.user-name {
+    font-weight: 600;
+    color: var(--primary-dark);
+}
+
+/* Authentication Modals */
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 30, 47, 0.8);
+    backdrop-filter: blur(5px);
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    z-index: 2000;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    width: 100%;
+    max-width: 450px;
+    background: white;
+    border-radius: 20px;
+    padding: 2rem;
+    position: relative;
+    animation: modal-slide-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes modal-slide-in {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    font-size: 2rem;
+    line-height: 1;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--gray-text);
+    transition: color 0.3s;
+}
+
+.modal-close:hover {
+    color: var(--primary-red);
+}
+
+.modal-content h2 {
+    margin-bottom: 1.5rem;
+    color: var(--primary-dark);
+    text-align: center;
+    font-size: 1.8rem;
+}
+
+.modal-content form label {
+    display: block;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    color: var(--primary-dark);
+}
+
+.modal-content form input {
+    width: 100%;
+    padding: 0.75rem;
+    margin-top: 0.4rem;
+    border: 2px solid var(--off-white);
+    border-radius: 12px;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.modal-content form input:focus {
+    border-color: var(--primary-red);
+    box-shadow: 0 0 0 3px rgba(239, 49, 37, 0.1);
+}
+
+.modal-content form button[type="submit"] {
+    width: 100%;
+    margin-top: 1rem;
+    border: none;
+    font-size: 1rem;
+}
+
+.form-switch {
+    text-align: center;
+    margin-top: 1rem;
+    color: var(--gray-text);
+}
+
+.form-switch a {
+    color: var(--primary-red);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.form-switch a:hover {
+    text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    nav {
+        flex-wrap: wrap;
+    }
+
+    .auth-section {
+        width: 100%;
+        justify-content: center;
+        margin-top: 1rem;
+    }
+}
