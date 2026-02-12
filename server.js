@@ -2,17 +2,44 @@ const express = require("express");
 const session = require("express-session");
 const cors = require("cors");
 const helmet = require("helmet");
+const fs = require("fs");
+const path = require("path");
 const db = require("./database");
 const emailService = require("./email");
+
+// ⚠️ GLOBAL SSL BYPASS for local development issues
+// This fixes "unable to verify the first certificate" errors
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-/**
- * ENV VARS (set these in CMD before npm start)
- * set PAYSTACK_SECRET_KEY=sk_test_xxxxx
- */
+// Basic .env parser
+const ENV_PATH = path.join(__dirname, '.env');
+if (fs.existsSync(ENV_PATH)) {
+  console.log('📝 Found .env file, loading variables...');
+  const envConfig = fs.readFileSync(ENV_PATH, 'utf8');
+  envConfig.split(/\r?\n/).forEach(line => {
+    const trimmedLine = line.trim();
+    if (!trimmedLine || trimmedLine.startsWith('#')) return;
+    const [key, ...valueParts] = trimmedLine.split('=');
+    if (key && valueParts.length > 0) {
+      const varKey = key.trim();
+      const varValue = valueParts.join('=').trim();
+      process.env[varKey] = varValue;
+      console.log(`✅ Loaded ${varKey}`);
+    }
+  });
+} else {
+  console.warn('⚠️ No .env file found at:', ENV_PATH);
+}
+
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || "";
+if (PAYSTACK_SECRET_KEY) {
+  console.log(`🎫 Paystack Key detected (starts with: ${PAYSTACK_SECRET_KEY.substring(0, 7)}...)`);
+} else {
+  console.error("❌ ERROR: PAYSTACK_SECRET_KEY is empty in .env or environment variables!");
+}
 
 // Menu (IDs must match your HTML data-item-id)
 const MENU = {
@@ -441,7 +468,11 @@ app.post("/api/paystack/initialize", async (req, res) => {
     });
   }
 
-  const { firstName, lastName, email, phone } = req.body || {};
+  let { firstName, lastName, email, phone } = req.body || {};
+
+  if (email && email.toLowerCase().includes('@igmail.com')) {
+    email = email.toLowerCase().replace('@igmail.com', '@gmail.com');
+  }
 
   if (!firstName || !lastName || !email) {
     return res.status(400).json({ error: "Please fill First Name, Last Name, and Email." });
@@ -491,14 +522,17 @@ app.post("/api/paystack/initialize", async (req, res) => {
       }
     };
 
-    const resp = await fetch("https://api.paystack.co/transaction/initialize", {
+    const fetchOptions = {
       method: "POST",
       headers: {
         Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify(payload)
-    });
+    };
+
+    // SSL verification is now disabled globally at the top of the file for local dev
+    const resp = await fetch("https://api.paystack.co/transaction/initialize", fetchOptions);
 
     const raw = await resp.text();
     let data;

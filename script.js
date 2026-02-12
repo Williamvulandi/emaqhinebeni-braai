@@ -478,8 +478,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (res.ok) {
         showToast("Email verified successfully!", "success");
         verifyModal.classList.remove("active");
-        if (authState.user) authState.user.emailVerified = true;
-        updateAuthUI();
+
+        // Sync with backend session (which was set upon verification)
+        await checkAuthStatus();
       } else {
         showToast(data.error || "Verification failed", "error");
       }
