@@ -7,9 +7,11 @@ const path = require("path");
 const db = require("./database");
 const emailService = require("./email");
 
-// ⚠️ GLOBAL SSL BYPASS for local development issues
-// This fixes "unable to verify the first certificate" errors
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+// ⚠️ SSL BYPASS - only for local development, NOT on production (Render)
+if (process.env.NODE_ENV !== 'production') {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+  console.log('⚠️ SSL verification disabled (development mode only)');
+}
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -161,6 +163,9 @@ app.post("/api/auth/signup", async (req, res) => {
     if (password.length < 6) {
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
+
+    // Create the user (or re-issue token if unverified)
+    const user = await db.createUser(email, password, firstName, lastName);
 
     // Send verification email (don't block on this)
     emailService.sendVerificationEmail(user.email, user.firstName, user.verificationToken)

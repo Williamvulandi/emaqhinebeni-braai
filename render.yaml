@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: emaqhinebeni-braai
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "20"
