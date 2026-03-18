@@ -29,14 +29,23 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // -------------------- Port Check (Crucial for User) --------------------
-  if (window.location.port === "5500" || window.location.port === "5501") {
-    const correctUrl = "http://localhost:3000";
-    const msg = `⚠️ YOU ARE ON THE WRONG LINK ⚠️\n\nThe cart will NOT work here.\n\nClick OK to go to the correct link:\n${correctUrl}`;
-    if (confirm(msg)) {
-      window.location.href = correctUrl;
+  // -------------------- Origin/Port Check (Crucial for User) --------------------
+  function checkOrigin() {
+    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    const isPort3000 = window.location.port === "3000";
+    const isProduction = window.location.hostname.includes("render.com") || window.location.hostname.includes("onrender.com");
+
+    if (isLocalhost && !isPort3000) {
+      const correctUrl = `http://localhost:3000${window.location.pathname}${window.location.search}`;
+      const msg = `⚠️ CONNECTION WARNING ⚠️\n\nYou are on port ${window.location.port}.\nThe backend server is likely on port 3000.\n\nClick OK to go to the correct link:\n${correctUrl}`;
+      if (confirm(msg)) {
+        window.location.href = correctUrl;
+      }
+    } else if (window.location.protocol === "file:") {
+      alert("⚠️ FILE PROTOCOL DETECTED ⚠️\n\nYou opened the file directly. The application requires a running server.\nPlease run the server and go to http://localhost:3000");
     }
   }
+  checkOrigin();
 
   // -------------------- Cart Logic --------------------
   const cartItemsDiv = document.getElementById("cart-items");
@@ -143,7 +152,17 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
           }
 
-          if (!res.ok) throw new Error("Add failed");
+          if (res.status === 403) {
+            showToast("Please verify your email to start ordering", "error");
+            quantitySpan.textContent = startQty; // Revert
+            return;
+          }
+
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.error || "Add failed");
+          }
+
           showToast(`Added ${itemName} to cart`);
         } else if (this.classList.contains("minus") && startQty > 0) {
           // Optimistic UI update
@@ -163,14 +182,29 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
           }
 
-          if (!res.ok) throw new Error("Remove failed");
+          if (res.status === 403) {
+            showToast("Please verify your email", "error");
+            quantitySpan.textContent = startQty; // Revert
+            return;
+          }
+
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.error || "Remove failed");
+          }
+
           showToast(`Removed ${itemName}`, "success");
         }
         // Sync ground truth
         updateCartDisplay();
       } catch (err) {
         console.error("Qty error:", err);
-        showToast("Connection error. Is server running?", "error");
+        
+        if (err instanceof TypeError && err.message.includes("fetch")) {
+          showToast("Connection error. Is the server running on port 3000?", "error");
+        } else {
+          showToast(`Error: ${err.message}`, "error");
+        }
 
         // Revert optimistic update
         if (quantitySpan) quantitySpan.textContent = startQty;

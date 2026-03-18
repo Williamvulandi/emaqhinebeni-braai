@@ -48,7 +48,7 @@ const MENU = {
   1: { id: 1, name: "Pork Braai Piece", price: 5 },
   2: { id: 2, name: "Chicken Feet", price: 1 },
   3: { id: 3, name: "Kebabs", price: 10 },
-  4: { id: 4, name: "Small Fat Cake", price: 1 },
+  4: { id: 4, name: "Pap + Kebabs + Chakalaka", price: 40 },
   5: { id: 5, name: "Chicken Wings", price: 8 },
   6: { id: 6, name: "Sausage Pieces", price: 6 },
   7: { id: 7, name: "Pap + Pork + Chakalaka", price: 35 },
@@ -422,41 +422,51 @@ app.get("/api/cart", requireVerified, (req, res) => {
 });
 
 app.post("/api/cart/add", requireVerified, (req, res) => {
-  const { itemId, quantity = 1 } = req.body || {};
-  const id = Number(itemId);
-  const qty = Number(quantity);
+  try {
+    const { itemId, quantity = 1 } = req.body || {};
+    const id = Number(itemId);
+    const qty = Number(quantity);
 
-  if (!MENU[id]) return res.status(400).json({ error: "Invalid itemId" });
-  if (!Number.isFinite(qty) || qty <= 0) return res.status(400).json({ error: "Invalid quantity" });
+    if (!MENU[id]) return res.status(400).json({ error: "Invalid itemId" });
+    if (!Number.isFinite(qty) || qty <= 0) return res.status(400).json({ error: "Invalid quantity" });
 
-  // Get current quantity from DB
-  const cart = db.getUserCart(req.session.userId);
-  const currentQty = cart[id] || 0;
-  const newQty = currentQty + qty;
+    // Get current quantity from DB
+    const cart = db.getUserCart(req.session.userId);
+    const currentQty = cart[id] || 0;
+    const newQty = currentQty + qty;
 
-  db.updateCartItem(req.session.userId, id, newQty);
+    db.updateCartItem(req.session.userId, id, newQty);
 
-  const { items, total } = buildCart(req.session.userId);
-  res.json({ success: true, items, total });
+    const { items, total } = buildCart(req.session.userId);
+    res.json({ success: true, items, total });
+  } catch (err) {
+    console.error('Cart add error:', err);
+    res.status(500).json({ error: 'Failed to add item to cart' });
+  }
 });
 
 app.post("/api/cart/remove", requireVerified, (req, res) => {
-  const { itemId, quantity = 1 } = req.body || {};
-  const id = Number(itemId);
-  const qty = Number(quantity);
+  try {
+    const { itemId, quantity = 1 } = req.body || {};
+    const id = Number(itemId);
+    const qty = Number(quantity);
 
-  if (!MENU[id]) return res.status(400).json({ error: "Invalid itemId" });
-  if (!Number.isFinite(qty) || qty <= 0) return res.status(400).json({ error: "Invalid quantity" });
+    if (!MENU[id]) return res.status(400).json({ error: "Invalid itemId" });
+    if (!Number.isFinite(qty) || qty <= 0) return res.status(400).json({ error: "Invalid quantity" });
 
-  // Get current quantity from DB
-  const cart = db.getUserCart(req.session.userId);
-  const current = cart[id] || 0;
-  const next = Math.max(0, current - qty);
+    // Get current quantity from DB
+    const cart = db.getUserCart(req.session.userId);
+    const current = cart[id] || 0;
+    const next = Math.max(0, current - qty);
 
-  db.updateCartItem(req.session.userId, id, next);
+    db.updateCartItem(req.session.userId, id, next);
 
-  const { items, total } = buildCart(req.session.userId);
-  res.json({ success: true, items, total });
+    const { items, total } = buildCart(req.session.userId);
+    res.json({ success: true, items, total });
+  } catch (err) {
+    console.error('Cart remove error:', err);
+    res.status(500).json({ error: 'Failed to remove item from cart' });
+  }
 });
 
 app.post("/api/cart/clear", requireVerified, (req, res) => {
