@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Khanya Kitchen | Premium Street Food</title>
+    <meta name="description" content="Authentic braai food ordering — pork, chicken, kebabs, pap combos. Order online from Khanya Kitchen.">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#EF3125">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍖</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p>Loading Khanya Kitchen...</p>
+    </div>
+
+    <!-- Verification Banner -->
+    <div id="verification-banner" class="verification-banner"
+        style="display: none; background: #FFF3CD; color: #856404; padding: 0.75rem; text-align: center; font-weight: 500; font-size: 0.9rem; border-bottom: 1px solid #FFEEBA;">
+        Please verify your email to start ordering.
+        <button id="open-verify-btn"
+            style="background: none; border: none; color: #856404; text-decoration: underline; cursor: pointer; font-weight: 600; padding: 0; margin: 0 10px;">Enter
+            Code</button>
+        |
+        <button id="resend-verification-btn"
+            style="background: none; border: none; color: #856404; text-decoration: underline; cursor: pointer; font-weight: 600; padding: 0; margin: 0 10px;">Resend
+            Email</button>
+    </div>
+
+    <header class="glass-header">
+        <nav>
+            <div class="logo">Khanya <span class="highlight">Kitchen</span></div>
+
+            <!-- Hamburger Menu Button -->
+            <button id="hamburger-btn" class="hamburger" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+
+            <ul class="nav-links" id="nav-links">
+                <li><a href="#home">Home</a></li>
+                <li><a href="#menu">Menu</a></li>
+                <li><a href="#orders-section" id="nav-orders-link" style="display: none;">My Orders</a></li>
+                <li><a href="#contact">Contact</a></li>
+                <li id="nav-admin-link" style="display: none;"><a href="/admin">Admin</a></li>
+            </ul>
+            <div class="auth-section">
+                <div id="auth-buttons" class="auth-buttons">
+                    <button id="login-btn" class="auth-btn">Login</button>
+                    <button id="signup-btn" class="auth-btn primary">Sign Up</button>
+                </div>
+                <div id="user-info" class="user-info" style="display: none;">
+                    <span id="user-name" class="user-name"></span>
+                    <button id="logout-btn" class="auth-btn">Logout</button>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section id="home" class="hero">
+            <div class="hero-content">
+                <h1>Authentic Taste.<br>Unbeatable Prices.</h1>
+                <p>Experience the best local flavors starting from just R1.</p>
+                <a href="#menu" class="cta-button">View Menu</a>
+            </div>
+            <div class="hero-decoration"></div>
+        </section>
+
+        <section id="menu" class="menu-section">
+            <div class="section-header">
+                <h2>Our Menu</h2>
+                <div class="underline"></div>
+            </div>
+
+            <!-- Menu loads dynamically from API -->
+            <div class="menu-grid" id="menu-grid">
+                <!-- Loading skeleton -->
+                <div class="menu-card skeleton-card"><div class="skeleton-image"></div><div class="skeleton-text"></div></div>
+                <div class="menu-card skeleton-card"><div class="skeleton-image"></div><div class="skeleton-text"></div></div>
+                <div class="menu-card skeleton-card"><div class="skeleton-image"></div><div class="skeleton-text"></div></div>
+            </div>
+
+            <!-- Cart Section -->
+            <div class="cart-section">
+                <h2>Your Order <span id="cart-count" class="badge">0</span></h2>
+                <div id="cart-items"></div>
+                <div class="cart-total">Total: R<span id="cart-total">0.00</span></div>
+
+                <div class="customer-form">
+                    <h3>Customer Details</h3>
+                    <label>
+                        First Name
+                        <input id="cust-first-name" type="text" placeholder="e.g. William" autocomplete="given-name" required>
+                    </label>
+                    <label>
+                        Last Name
+                        <input id="cust-last-name" type="text" placeholder="e.g. Vulandi" autocomplete="family-name" required>
+                    </label>
+                    <label>
+                        Email
+                        <input id="cust-email" type="email" placeholder="e.g. name@email.com" autocomplete="email" required>
+                    </label>
+                    <label>
+                        Phone (optional)
+                        <input id="cust-phone" type="tel" placeholder="e.g. 0712345678" autocomplete="tel">
+                    </label>
+                    <p class="cart-note" style="font-size: 0.9rem; color: #666; margin-top: 10px;">
+                        Secure payment via Paystack.
+                    </p>
+                </div>
+
+                <button id="checkout-btn" class="cta-button" style="margin-top: 20px;">Checkout & Pay</button>
+            </div>
+        </section>
+
+        <!-- Order History Section -->
+        <section id="orders-section" class="orders-section" style="display: none;">
+            <div class="section-header">
+                <h2>My Orders</h2>
+                <div class="underline"></div>
+            </div>
+            <div id="orders-list" class="orders-list">
+                <p style="text-align: center; color: #546E7A;">Loading orders...</p>
+            </div>
+        </section>
+    </main>
+
+    <footer id="contact">
+        <div class="footer-content">
+            <div class="footer-brand">Khanya <span class="highlight">Kitchen</span></div>
+
+            <div class="contact-buttons">
+                <a href="https://wa.me/27676827139" target="_blank" class="contact-btn whatsapp">
+                    Chat on WhatsApp
+                </a>
+                <a href="tel:+27676827139" class="contact-btn phone">
+                    Call Us
+                </a>
+            </div>
+
+            <p class="contact-text">+27 67 682 7139</p>
+            <p>&copy; 2026 Khanya Kitchen. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" data-modal="login-modal">&times;</span>
+            <h2>Welcome Back</h2>
+            <form id="login-form">
+                <label>
+                    Email
+                    <input type="email" id="login-email" required autocomplete="email" placeholder="your@email.com">
+                </label>
+                <label>
+                    Password
+                    <input type="password" id="login-password" required autocomplete="current-password" placeholder="••••••">
+                </label>
+                <button type="submit" class="cta-button">Login</button>
+                <div class="form-switch" style="text-align: center; margin-top: 1rem;">
+                    <p><a href="#" id="forgot-password-link" style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Forgot Password?</a></p>
+                    <p>Don't have an account? <a href="#" id="switch-to-signup">Sign up</a></p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div id="forgot-password-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" data-modal="forgot-password-modal">&times;</span>
+            <h2>Forgot Password</h2>
+            <p style="text-align: center; color: var(--gray-text); margin-bottom: 1.5rem;">Enter your email to receive a reset link.</p>
+            <form id="forgot-password-form">
+                <label>
+                    Email Address
+                    <input type="email" id="forgot-email" required placeholder="your@email.com">
+                </label>
+                <button type="submit" class="cta-button">Send Reset Link</button>
+                <p class="form-switch">Remembered? <a href="#" id="forgot-to-login">Back to Login</a></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Signup Modal -->
+    <div id="signup-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" data-modal="signup-modal">&times;</span>
+            <h2>Create Account</h2>
+            <form id="signup-form">
+                <label>
+                    First Name
+                    <input type="text" id="signup-firstname" required autocomplete="given-name" placeholder="William">
+                </label>
+                <label>
+                    Last Name
+                    <input type="text" id="signup-lastname" required autocomplete="family-name" placeholder="Vulandi">
+                </label>
+                <label>
+                    Email
+                    <input type="email" id="signup-email" required autocomplete="email" placeholder="your@email.com">
+                </label>
+                <label>
+                    Password (min. 6 characters)
+                    <input type="password" id="signup-password" required autocomplete="new-password" placeholder="••••••">
+                </label>
+                <button type="submit" class="cta-button">Sign Up</button>
+                <p class="form-switch">Already have an account? <a href="#" id="switch-to-login">Login</a></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Verify Code Modal -->
+    <div id="verify-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" data-modal="verify-modal">&times;</span>
+            <h2>Verify Your Email</h2>
+            <p style="margin-bottom: 20px; color: #666;">Please enter the 6-digit code sent to your email.</p>
+            <form id="verify-code-form">
+                <label>
+                    Verification Code
+                    <input type="text" id="verify-code-input" required placeholder="123456" maxlength="6" pattern="\d{6}">
+                </label>
+                <button type="submit" class="cta-button">Verify Now</button>
+                <p class="form-switch"><a href="#" id="resend-code-btn">Resend Code</a></p>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

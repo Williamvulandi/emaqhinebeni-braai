@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Khanya Kitchen</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-red: #EF3125;
+            --primary-dark: #0A1E2F;
+            --white: #FFFFFF;
+            --off-white: #F4F6F8;
+            --gray-text: #546E7A;
+            --success: #25D366;
+            --warning: #FFC107;
+            --info: #17A2B8;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--off-white);
+            color: var(--primary-dark);
+            line-height: 1.6;
+        }
+
+        .admin-header {
+            background: var(--primary-dark);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .admin-header h1 { font-size: 1.2rem; }
+        .admin-header a { color: white; text-decoration: none; font-weight: 600; opacity: 0.8; transition: opacity 0.2s; }
+        .admin-header a:hover { opacity: 1; }
+
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .stat-card .label { color: var(--gray-text); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-card .value { font-size: 2rem; font-weight: 800; color: var(--primary-dark); margin-top: 0.5rem; }
+        .stat-card .value.red { color: var(--primary-red); }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 0;
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            background: transparent;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            color: var(--gray-text);
+            font-size: 0.95rem;
+        }
+
+        .tab-btn.active { color: var(--primary-red); border-bottom-color: var(--primary-red); }
+        .tab-btn:hover { color: var(--primary-dark); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Orders Table */
+        .orders-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .orders-table th {
+            background: var(--primary-dark);
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .orders-table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.9rem;
+        }
+
+        .orders-table tr:hover td { background: #FAFBFC; }
+
+        .status-badge {
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+
+        .status-badge.received { background: #FFF3CD; color: #856404; }
+        .status-badge.preparing { background: #CCE5FF; color: #004085; }
+        .status-badge.ready { background: #D4EDDA; color: #155724; }
+        .status-badge.completed { background: #E8E8E8; color: #333; }
+        .status-badge.cancelled { background: #F8D7DA; color: #721C24; }
+
+        .status-select {
+            padding: 0.3rem 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        /* Menu Items */
+        .menu-items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .menu-item-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .menu-item-card h3 {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .menu-item-card .menu-field {
+            margin-bottom: 0.75rem;
+        }
+
+        .menu-item-card label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--gray-text);
+            margin-bottom: 0.25rem;
+        }
+
+        .menu-item-card input, .menu-item-card select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover { opacity: 0.85; }
+        .btn-primary { background: var(--primary-red); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-sm { padding: 0.3rem 0.6rem; font-size: 0.8rem; }
+
+        .btn-group { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+
+        #admin-login {
+            max-width: 400px;
+            margin: 100px auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        #admin-login h2 { margin-bottom: 1rem; }
+        #admin-login p { color: var(--gray-text); margin-bottom: 1.5rem; }
+
+        @media (max-width: 768px) {
+            .orders-table { font-size: 0.8rem; }
+            .orders-table th, .orders-table td { padding: 0.5rem; }
+            .admin-container { padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div id="admin-login" style="display: none;">
+        <h2>🔒 Admin Access</h2>
+        <p>Please <a href="/" style="color: var(--primary-red);">log in</a> with your admin account to access this page.</p>
+    </div>
+
+    <div id="admin-app" style="display: none;">
+        <header class="admin-header">
+            <h1>⚙️ Khanya Kitchen Admin</h1>
+            <a href="/">← Back to Site</a>
+        </header>
+
+        <div class="admin-container">
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="label">Total Orders</div>
+                    <div class="value" id="stat-total-orders">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Pending</div>
+                    <div class="value red" id="stat-pending">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Total Revenue</div>
+                    <div class="value" id="stat-revenue">R0.00</div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="orders-tab">Orders</button>
+                <button class="tab-btn" data-tab="menu-tab">Menu</button>
+            </div>
+
+            <!-- Orders Tab -->
+            <div id="orders-tab" class="tab-content active">
+                <table class="orders-table">
+                    <thead>
+                        <tr>
+                            <th>Ref</th>
+                            <th>Customer</th>
+                            <th>Items</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orders-tbody">
+                        <tr><td colspan="7" style="text-align: center; padding: 2rem;">Loading orders...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Menu Tab -->
+            <div id="menu-tab" class="tab-content">
+                <div class="menu-items-grid" id="menu-items-grid">
+                    <p>Loading menu items...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isAdmin = false;
+
+        // Check if user is admin
+        async function checkAdmin() {
+            try {
+                const res = await fetch('/api/auth/me');
+                const data = await res.json();
+                if (data.authenticated && data.user.isAdmin) {
+                    isAdmin = true;
+                    document.getElementById('admin-app').style.display = 'block';
+                    loadStats();
+                    loadOrders();
+                    loadMenu();
+                } else {
+                    document.getElementById('admin-login').style.display = 'block';
+                }
+            } catch (err) {
+                document.getElementById('admin-login').style.display = 'block';
+            }
+        }
+
+        // Tabs
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.tab).classList.add('active');
+            });
+        });
+
+        // Load Stats
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/admin/stats');
+                const data = await res.json();
+                document.getElementById('stat-total-orders').textContent = data.totalOrders;
+                document.getElementById('stat-pending').textContent = data.pendingOrders;
+                document.getElementById('stat-revenue').textContent = `R${data.totalRevenue.toFixed(2)}`;
+            } catch (err) { console.error('Stats error:', err); }
+        }
+
+        // Load Orders
+        async function loadOrders() {
+            try {
+                const res = await fetch('/api/admin/orders');
+                const data = await res.json();
+                const tbody = document.getElementById('orders-tbody');
+
+                if (!data.orders.length) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;">No orders yet</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.orders.map(order => {
+                    const items = order.items.map(i => `${i.name} x${i.quantity}`).join(', ');
+                    const date = new Date(order.createdAt).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+                    return `
+                        <tr>
+                            <td><strong>${esc(order.reference)}</strong></td>
+                            <td>${esc(order.customerFirstName)} ${esc(order.customerLastName)}<br><small>${esc(order.customerEmail)}</small></td>
+                            <td style="max-width: 200px;">${esc(items)}</td>
+                            <td><strong>R${order.total.toFixed(2)}</strong></td>
+                            <td><span class="status-badge ${order.status}">${order.status}</span></td>
+                            <td><small>${date}</small></td>
+                            <td>
+                                <select class="status-select" onchange="updateStatus(${order.id}, this.value)">
+                                    ${['received','preparing','ready','completed','cancelled'].map(s =>
+                                        `<option value="${s}" ${s === order.status ? 'selected' : ''}>${s}</option>`
+                                    ).join('')}
+                                </select>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (err) { console.error('Orders error:', err); }
+        }
+
+        // Update Order Status
+        async function updateStatus(orderId, status) {
+            try {
+                const res = await fetch(`/api/admin/orders/${orderId}/status`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status })
+                });
+                if (res.ok) {
+                    loadStats();
+                    loadOrders();
+                }
+            } catch (err) { console.error('Status update error:', err); }
+        }
+
+        // Load Menu
+        async function loadMenu() {
+            try {
+                const res = await fetch('/api/admin/menu');
+                const data = await res.json();
+                const grid = document.getElementById('menu-items-grid');
+
+                grid.innerHTML = data.items.map(item => `
+                    <div class="menu-item-card" id="menu-card-${item.id}">
+                        <h3>
+                            <span>${esc(item.name)}</span>
+                            <span class="status-badge ${item.available ? 'ready' : 'cancelled'}">${item.available ? 'Available' : 'Hidden'}</span>
+                        </h3>
+                        <div class="menu-field">
+                            <label>Name</label>
+                            <input type="text" value="${esc(item.name)}" id="name-${item.id}">
+                        </div>
+                        <div class="menu-field">
+                            <label>Price (R)</label>
+                            <input type="number" value="${item.price}" id="price-${item.id}" step="0.01">
+                        </div>
+                        <div class="menu-field">
+                            <label>Description</label>
+                            <input type="text" value="${esc(item.description || '')}" id="desc-${item.id}">
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-primary btn-sm" onclick="saveMenuItem(${item.id})">Save</button>
+                            <button class="btn btn-sm" style="background: ${item.available ? '#F8D7DA' : '#D4EDDA'}; color: ${item.available ? '#721C24' : '#155724'}"
+                                onclick="toggleAvailability(${item.id}, ${!item.available})">
+                                ${item.available ? 'Hide' : 'Show'}
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (err) { console.error('Menu error:', err); }
+        }
+
+        // Save Menu Item
+        async function saveMenuItem(id) {
+            const name = document.getElementById(`name-${id}`).value;
+            const price = parseFloat(document.getElementById(`price-${id}`).value);
+            const description = document.getElementById(`desc-${id}`).value;
+
+            try {
+                const res = await fetch(`/api/admin/menu/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, price, description })
+                });
+                if (res.ok) {
+                    alert('✅ Menu item updated!');
+                    loadMenu();
+                }
+            } catch (err) { alert('Failed to save'); }
+        }
+
+        // Toggle Availability
+        async function toggleAvailability(id, available) {
+            try {
+                await fetch(`/api/admin/menu/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ available })
+                });
+                loadMenu();
+            } catch (err) { alert('Failed to update'); }
+        }
+
+        // Escape HTML
+        function esc(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // Initialize
+        checkAdmin();
+    </script>
+</body>
+</html>
