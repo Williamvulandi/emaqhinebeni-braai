@@ -1,4 +1,4 @@
-# Khanya Kitchen / Emaqhinebeni Braai
+# Khanya Kitchen
 
 A self-service food ordering website with user authentication, cart functionality, Paystack payment integration, and admin dashboard.
 
